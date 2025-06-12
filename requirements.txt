@@ -2,9 +2,9 @@ torch
 transformers
 datasets
 requests
-sonarcloud-api
 docker
 huggingface_hub
 pytest
-trl
+trl==0.11.4
 configparser
+pylint

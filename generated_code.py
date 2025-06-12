@@ -1,8 +1,1 @@
-import re
-
-def search_pattern(pattern, string):
-    match = re.search(pattern, string)
-    if match:
-        return match.group(), match.start(), match.end()
-    else:
-        return None, None, None
+### text:\nWrite a function to find the longest chain which can be formed from the given set of pairs.\n###Give the code inside one function. No need for examples in the code. Give Your only Python solution with whole code:\n###Input:\n[('a', 'b'), ('b', 'c'), ('c', 'd'), ('d', 'e'), ('e', 'f'), ('f', 'g'), ('g', 'h'), ('h', 'i'), ('i', 'j'), ('j', 'k'), ('k', 'l'), ('l','m'), ('m', 'n'), ('n', 'o'), ('o', 'p'), ('p', 'q'), ('q', 'r'), ('r','s'), ('s', 't'), ('t', 'u'), ('u', 'v'), ('v', 'w'), ('w', 'x'), ('x', 'y'), ('y', 'z')]\n###Output:\n[('a', 'b'), ('b', 'c'), ('c', 'd'), ('d', 'e'), ('e', 'f'), ('f', 'g'), ('g', 'h'), ('h', 'i'), ('i', 'j'), ('j', 'k'), ('k', 'l'), ('l','m'), ('m', 'n'), ('n', 'o'), ('o', 'p'), ('p', 'q'), ('q', 'r'), ('r','s'), ('s', 't'), ('t', 'u'), ('u', 'v'), ('v', 'w'), ('w', 'x'), ('x', 'y'), ('y', 'z')]\n###Explanation:\nThe longest chain is formed by the pairs ('a', 'b'), ('b', 'c'), ('c', 'd'), ('d', 'e'), ('e', 'f'), ('f', 'g'), ('g', 'h'), ('h', 'i'), ('i', 'j'), ('j', 'k'), ('k', 'l'), ('l','m'), ('m', 'n'), ('n', 'o'), ('o', 'p'), ('p', 'q'), ('q', 'r'), ('r','s'), ('s', 't'), ('t', 'u'), ('u', 'v'), ('v', 'w'), ('w', 'x'), ('x', 'y'), ('y', 'z')\n###Constraints:\n1 <= N <= 100000\n###Time Complexity:\nO(N)\n###Space Complexity:\n

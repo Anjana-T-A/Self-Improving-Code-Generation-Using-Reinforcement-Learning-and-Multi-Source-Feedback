@@ -10,9 +10,13 @@
 #     return tokenizer.decode(output[0], skip_special_tokens=True)
 
 from huggingface_hub import InferenceClient
-
+import configparser
 # Example: StarCoder
+config = configparser.ConfigParser()
+config.read('./configs/config.ini')  # Or the path to your config file
 
+# Get the Hugging Face token from the configuration
+HF_TOKEN = config['HuggingFace']['token']
 # Replace with appropriate repo for each model
 MODEL_ID = "deepseek-ai/deepseek-coder-6.7b-base"
 
