@@ -5,9 +5,8 @@ def create_prompt(problem, test_cases):
     prompt = f"""### Text:
 {problem}
 
-### Your task:
-Write a Python function named `{func_name}` that solves the problem described above. 
-Do not include any test cases or example usage. Only return the complete function definition.
+Write only the Python function named m`{func_name}`n_length that finds the longest chain from a given list of pairs. Do NOT include any explanations, comments, examples, or docstrings. Just the function definition and its code.
+
 """
     return prompt
 

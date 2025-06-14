@@ -11,39 +11,41 @@ from rl.ppo_trainer import run_ppo_training
 from rl.evaluate_model import evaluate_model
 from utils.unit_tests import run_unit_tests
 from utils.unit_tests import compute_adaptive_reward
+import torch
 
 datasets = load_datasets()
 model_checkpoint = "ppo_checkpoints"
-# run_ppo_training("codellama/CodeLlama-7b-Python-hf", datasets["train"])
-# run_ppo_training("bigcode/starcoder2-7b", datasets["train"])
+
+
+run_ppo_training("codellama/CodeLlama-7b-Python-hf", datasets["train"])
 
 
 # evaluate_model(model_checkpoint, datasets["test"], k=10, unit_test_fn=None)
 
 
-def evaluate_dataset_static_analysis(dataset_split, model_module):
-    rewards = []
-    for item in dataset_split:
-        prompt = create_prompt(item['text'], item['test_list'])
-        print(prompt)
-        response = model_module.generate_code(prompt)
-        code = extract_code(response)
-        # test = analyze_code_with_pylint(code)
-        # sonar_result = analyze_code_with_sonarqube(code)
-        # reward = static_analysis_reward(sonar_result)
-        # rewards.append({
-        #     "prompt": prompt,
-        #     "code": code,
-        #     "reward": reward
-        # })
-        unit = run_unit_tests(code,item["test_list"])
-        reward = compute_adaptive_reward(unit)
-        rewards.append(reward)
-    print(rewards)
-    return rewards
+# def evaluate_dataset_static_analysis(dataset_split, model_module):
+#     rewards = []
+#     for item in dataset_split:
+#         prompt = create_prompt(item['text'], item['test_list'])
+#         print(prompt)
+#         response = model_module.generate_code(prompt)
+#         code = extract_code(response)
+#         # test = analyze_code_with_pylint(code)
+#         # sonar_result = analyze_code_with_sonarqube(code)
+#         # reward = static_analysis_reward(sonar_result)
+#         # rewards.append({
+#         #     "prompt": prompt,
+#         #     "code": code,
+#         #     "reward": reward
+#         # })
+#         unit = run_unit_tests(code,item["test_list"])
+#         reward = compute_adaptive_reward(unit)
+#         rewards.append(reward)
+#     print(rewards)
+#     return rewards
 
 
-results = evaluate_dataset_static_analysis(datasets['train'], qwen)
+# results = evaluate_dataset_static_analysis(datasets['train'], qwen)
 
 # # print(results[:2])
 
