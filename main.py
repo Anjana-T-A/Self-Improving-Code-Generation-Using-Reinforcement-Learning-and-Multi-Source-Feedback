@@ -16,9 +16,10 @@ import torch
 datasets = load_datasets()
 model_checkpoint = "ppo_checkpoints"
 
-
+# 
 run_ppo_training("codellama/CodeLlama-7b-Python-hf", datasets["train"])
-
+# run_ppo_training("Salesforce/codegen-2B-multi", datasets["train"],100)
+# run_ppo_training("bigcode/starcoder2-3b", datasets["train"],100)
 
 # evaluate_model(model_checkpoint, datasets["test"], k=10, unit_test_fn=None)
 
@@ -52,28 +53,6 @@ run_ppo_training("codellama/CodeLlama-7b-Python-hf", datasets["train"])
 
 
 
-
-# # Training loop using PPO with static analysis reward
-# def ppo_train_static_analysis(dataset_split,model_module):
-#     for item in dataset_split:
-#         prompt = create_prompt(item['text'])
-#         # input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to("cuda")
-
-#         # Generate output
-#         # output = model.generate(input_ids=input_ids, max_new_tokens=128)
-#         response = model_module.generate_code(prompt)
-#         # response = tokenizer.decode(output[0], skip_special_tokens=True)
-
-#         # Calculate reward from SonarQube
-#         # sonar_result = analyze_code_with_sonarqube(response)
-#         code = extract_code(response)
-#         reward = analyze_code_with_pylint(code)
-
-#         # PPO update (Note: model must return a "value head" output for TRL to work)
-#         ppo_trainer.step([prompt], [response], [reward])
-
-#         print(f"Prompt: {prompt[:60]}...")
-#         print(f"Reward: {reward:.3f}\n")
 
 
 # # from data.datasets import load_datasets

@@ -60,8 +60,13 @@ def analyze_code_with_pylint(code_snippet, file_name="generated_code.py"):
         }
     """
     # Write the generated code to a file
-    with open(file_name, 'w') as f:
-        f.write(code_snippet)
+    try:
+        with open(file_name, 'w') as f:
+            f.write(code_snippet)
+    except IOError as e:
+        print(f"Error writing to file {file_name}: {e}")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
 
     # Run Pylint with JSON output to capture detailed lint messages
     result = subprocess.run(
@@ -100,12 +105,8 @@ def analyze_code_with_pylint(code_snippet, file_name="generated_code.py"):
     # Normalize score to [0.0, 1.0]
     normalized_reward = max(min(score / 10.0, 1.0), 0.0)
 
-    # Debug output
-    print(f"Pylint score: {score:.2f} / 10.0")
-    print(f"Normalized reward: {normalized_reward:.2f}")
-
     return {
-        "pylint_messages": lint_output,
+        "messages": lint_output,
         "score": score,
         "normalized_reward": normalized_reward
     }

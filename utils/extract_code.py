@@ -1,44 +1,29 @@
 import re
 
-# def extract_code(text):
-#     """
-#     Extracts the first Python code block from a string containing markdown-style triple backticks.
-#     """
-#     if not isinstance(text, str):
-#         text = str(text)
-    
-#     print(text)
-#     code_blocks = re.findall(r"```(?:python)?\n(.*?)```", text, re.DOTALL)
-#     print("_--------------------------------_")
-#     print(code_blocks)
-#     return code_blocks[0].strip() if code_blocks else None
-
-
-import re
-
 def extract_code(text):
     """
-    Extracts the first Python function code block from the given text.
-    The function starts with 'def ' and continues until the first
-    unindented line or end of string.
+    Extracts Python code from either:
+    1. Markdown-style triple-backtick code blocks (```python ... ```)
+    2. Or standalone Python function definitions in raw text (starting with 'def ')
 
-    Returns the function code as a string (including 'def ...').
+    Returns the first detected function definition as a string.
     """
     if not isinstance(text, str):
         text = str(text)
 
-    # Regex to match a function block:
-    # - Start at 'def ' at line start
-    # - Capture all indented lines following it (including blank lines)
+    # First, try to extract from a markdown code block
+    code_blocks = re.findall(r"```(?:python)?\n(.*?)```", text, re.DOTALL)
+    if code_blocks:
+        code_text = code_blocks[0]
+    else:
+        code_text = text  # Fall back to original text if no code block found
+
+    # Extract the first function definition from the code text
     pattern = re.compile(
-        r"(^def\s.+?:\n"           # function def line (starts with def ...:)
-        r"(?:^[ \t]+.*\n)*"        # subsequent indented lines (body)
-        r")",
-        re.MULTILINE
+        r"(^def\s.+?:\n"        # def line
+        r"(?:^[ \t]+.*\n?)*)"   # indented block
+        , re.MULTILINE
     )
 
-    matches = pattern.findall(text)
-    if matches:
-        return matches[0].rstrip()
-    else:
-        return None
+    matches = pattern.findall(code_text)
+    return matches[0].rstrip() if matches else None
