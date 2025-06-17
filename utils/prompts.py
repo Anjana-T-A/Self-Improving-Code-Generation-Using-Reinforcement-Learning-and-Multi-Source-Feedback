@@ -2,11 +2,13 @@ import re
 
 def create_prompt(problem, test_cases):
     func_name = extract_function_name(test_cases)
-    prompt = f""" Problem:
-{problem} \n
-Generate a python code to solve not in any other languages.
-Give a python solution for above problem with given function name  "{func_name}"
-Do not provide function calls or examples.
+    prompt = f""" 
+Problem: {problem} \n
+
+Give the python code for above problem with function name  "{func_name}"
+Like complete the code below:
+def {func_name}
+
 """
 
     return prompt

@@ -1,7 +1,8 @@
 from data.datasets import load_datasets
+from rl.ppo_trainer_batch import run_ppo_epoch_training
 from utils.prompts import create_prompt
 from utils.sonar_api import analyze_code_with_sonarqube
-from utils.rewards import static_analysis_reward_sonar
+from utils.rewards import extract_pylint_score, static_analysis_reward_sonar
 from utils.extract_code import extract_code
 import models.starcoder as starcoder
 import models.deepseek as deepseek
@@ -17,10 +18,18 @@ datasets = load_datasets()
 model_checkpoint = "ppo_checkpoints"
 
 # 
-run_ppo_training("codellama/CodeLlama-7b-Python-hf", datasets["train"])
+# run_ppo_training("codellama/CodeLlama-7b-Python-hf", datasets["train"])
 # run_ppo_training("Salesforce/codegen-2B-multi", datasets["train"],100)
 # run_ppo_training("bigcode/starcoder2-3b", datasets["train"],100)
-
+# run_ppo_batch_training("bigcode/starcoder2-3b", datasets["train"],100)
+run_ppo_epoch_training("Salesforce/codet5-base",output_dir="./ppo_checkpoints", 
+    batch_size=2, 
+    num_epochs=3,  # Added epoch control
+    eval_every=1  )
+# run_ppo_epoch_training("codellama/CodeLlama-7b-Python-hf",output_dir="./ppo_checkpoints", 
+#     batch_size=2, 
+#     num_epochs=3,  # Added epoch control
+#     eval_every=1  )
 # evaluate_model(model_checkpoint, datasets["test"], k=10, unit_test_fn=None)
 
 
@@ -28,7 +37,6 @@ run_ppo_training("codellama/CodeLlama-7b-Python-hf", datasets["train"])
 #     rewards = []
 #     for item in dataset_split:
 #         prompt = create_prompt(item['text'], item['test_list'])
-#         print(prompt)
 #         response = model_module.generate_code(prompt)
 #         code = extract_code(response)
 #         # test = analyze_code_with_pylint(code)
@@ -39,14 +47,16 @@ run_ppo_training("codellama/CodeLlama-7b-Python-hf", datasets["train"])
 #         #     "code": code,
 #         #     "reward": reward
 #         # })
-#         unit = run_unit_tests(code,item["test_list"])
-#         reward = compute_adaptive_reward(unit)
+#         print( f"====Prompt=====\n {prompt}\n =====response======: {response}")
+#         code_snippet = extract_code(response)
+#         pylint_result = analyze_code_with_pylint(code_snippet)
+#         reward = extract_pylint_score(pylint_result)
 #         rewards.append(reward)
 #     print(rewards)
-#     return rewards
+# #     return rewards
 
 
-# results = evaluate_dataset_static_analysis(datasets['train'], qwen)
+# results = evaluate_dataset_static_analysis(datasets['train'], starcoder)
 
 # # print(results[:2])
 

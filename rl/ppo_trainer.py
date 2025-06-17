@@ -26,7 +26,7 @@ def run_ppo_training(model_path, dataset_split, output_dir="./ppo_checkpoints"):
     # Force Accelerate to use cuda:1
     # PPO Config
     config = PPOConfig(
-        learning_rate=1e-5,
+        learning_rate=1e-6,
         batch_size=1,
         mini_batch_size=1
     )
@@ -53,21 +53,22 @@ def run_ppo_training(model_path, dataset_split, output_dir="./ppo_checkpoints"):
  
         reward_history = []
         step = 0
-        target_reward = .3
-        max_steps_per_prompt = 100
+        target_reward = .65
+        max_steps_per_prompt = 10
         min_reward_delta = 0.001
-        window_size = 20
+        window_size = 5
 
         while step < max_steps_per_prompt:
             
             response = ppo_trainer.model.generate(
                 **inputs,
-                max_new_tokens=256,
+                max_new_tokens=512,
                 do_sample=True,
-                top_p=0.95,
+                top_p=0.75,
                 top_k=50,
-                temperature=0.6,
-                pad_token_id=tokenizer.eos_token_id
+                temperature=0.4,
+                pad_token_id=tokenizer.eos_token_id,
+                eos_token_id=tokenizer.eos_token_id,
             )
             print(f"Currently selected device: {device}")
             print(f"torch.cuda.current_device(): {torch.cuda.current_device()}")
