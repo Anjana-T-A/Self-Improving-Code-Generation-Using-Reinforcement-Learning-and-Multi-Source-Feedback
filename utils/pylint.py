@@ -2,48 +2,6 @@ import os
 import subprocess
 import json
 
-# def analyze_code_with_pylint(code_snippet, file_name="generated_code.py"):
-#     # Write code to file
-#     with open(file_name, 'w') as f:
-#         f.write(code_snippet)
-
-#     # Run pylint and get JSON output
-#     result = subprocess.run(
-#         ["pylint", "--output-format=json", file_name],
-#         capture_output=True,
-#         text=True
-#     )
-
-#     # Parse JSON output (even if linting returned non-zero exit code)
-#     try:
-#         lint_output = json.loads(result.stdout)
-#     except json.JSONDecodeError:
-#         print("Failed to parse pylint output:")
-#         print(result.stdout)
-#         raise
-
-#     # Get numeric score
-#     score_result = subprocess.run(
-#         ["pylint", file_name, "-f", "parseable"],
-#         capture_output=True,
-#         text=True
-#     )
-#     score_line = next((line for line in score_result.stdout.splitlines() if "Your code has been rated at" in line), None)
-#     score = None
-#     if score_line:
-#         score = score_line.split(" ")[6].split("/")[0]
-
-#     print ("score", score)
-#     return {
-#         "pylint_messages": lint_output,
-#         "score": score
-#     }
-
-
-import os
-import subprocess
-import json
-
 def analyze_code_with_pylint(code_snippet, file_name="generated_code.py"):
     """
     Analyze the generated Python code using Pylint and compute a normalized reward.

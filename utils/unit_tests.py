@@ -80,9 +80,3 @@ def compute_adaptive_reward(test_result: dict) -> float:
     pass_rate = test_result.get("pass_rate", 0.0)
     reward = -0.3 + 1.3 * pass_rate
     return round(reward, 4)  # Optional: round for readability
-
-# def compute_adaptive_reward(test_result: dict, min_reward=-0.3, max_reward=1.0) -> float:
-#     pass_rate = test_result.get("pass_rate", 0.0)
-#     reward_range = max_reward - min_reward
-#     reward = min_reward + reward_range * pass_rate
-#     return round(reward, 4)
