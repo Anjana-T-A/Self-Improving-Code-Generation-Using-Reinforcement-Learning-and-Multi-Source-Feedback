@@ -1,6 +1,6 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
-model_path = "codellama/CodeLlama-7b-Python-hf"  # Change for each model
+model_path = "deepseek-ai/deepseek-coder-1.3b-instruct"  # Change for each model
 tokenizer = AutoTokenizer.from_pretrained(model_path)
 model = AutoModelForCausalLM.from_pretrained(model_path, device_map="auto")
 

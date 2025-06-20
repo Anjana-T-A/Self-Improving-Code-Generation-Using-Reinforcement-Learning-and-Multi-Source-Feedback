@@ -1,6 +1,6 @@
 import re
 
-def extract_code(text):
+def extract_code(text,file_name):
     """
     Extracts Python code from either:
     1. Markdown-style triple-backtick code blocks (```python ... ```)
@@ -26,7 +26,15 @@ def extract_code(text):
     )
 
     matches = pattern.findall(code_text)
-    return matches[0].rstrip() if matches else None
+    try:
+        with open(file_name, 'w') as f:
+            f.write(matches[0].rstrip())
+    except IOError as e:
+        print(f"Error writing to file {file_name}: {e}")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+
+    return matches[0].rstrip() if matches else ""
 
 
 

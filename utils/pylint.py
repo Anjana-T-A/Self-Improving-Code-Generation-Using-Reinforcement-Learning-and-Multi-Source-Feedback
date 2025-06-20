@@ -2,7 +2,7 @@ import os
 import subprocess
 import json
 
-def analyze_code_with_pylint(code_snippet, file_name="generated_code.py"):
+def analyze_code_with_pylint(code_snippet, file_name):
     """
     Analyze the generated Python code using Pylint and compute a normalized reward.
     
@@ -18,13 +18,7 @@ def analyze_code_with_pylint(code_snippet, file_name="generated_code.py"):
         }
     """
     # Write the generated code to a file
-    try:
-        with open(file_name, 'w') as f:
-            f.write(code_snippet)
-    except IOError as e:
-        print(f"Error writing to file {file_name}: {e}")
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
+    
 
     # Run Pylint with JSON output to capture detailed lint messages
     result = subprocess.run(

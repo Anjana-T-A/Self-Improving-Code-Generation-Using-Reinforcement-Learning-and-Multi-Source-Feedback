@@ -61,6 +61,8 @@ DO NOT repeat the prompt in response
 The function should have the following signature:
 
 {func}
+
+No comments needed in response and only must provide the whole code in response.
 """
     return prompt
 

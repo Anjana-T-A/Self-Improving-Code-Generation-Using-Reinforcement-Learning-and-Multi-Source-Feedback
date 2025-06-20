@@ -18,12 +18,11 @@ def create_model_and_tokenizer(model_path, device):
 def run_ppo_training(model_path, dataset_split, output_dir="./ppo_checkpoints"):
     torch.cuda.empty_cache()
     # Set device to GPU 1
-    device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model, tokenizer = create_model_and_tokenizer(model_path, device)
 
     # Load ref model and move to device
     ref_model = AutoModelForCausalLMWithValueHead.from_pretrained(model_path).to(device)
-    # Force Accelerate to use cuda:1
     # PPO Config
     config = PPOConfig(
         learning_rate=1e-6,
@@ -39,7 +38,7 @@ def run_ppo_training(model_path, dataset_split, output_dir="./ppo_checkpoints"):
     model.to(device)
     ref_model.to(device)
 
-
+    torch.cuda.set_device(device)
     i = 0
     for item in dataset_split:
         prompt = create_prompt(item['text'], item['test_list'])
@@ -105,13 +104,13 @@ def run_ppo_training(model_path, dataset_split, output_dir="./ppo_checkpoints"):
 
             # Check stopping criteria
             if reward >= target_reward:
-                print(f"✅ Stopping early: reward {reward:.2f} >= target {target_reward}")
+                print(f" Stopping early: reward {reward:.2f} >= target {target_reward}")
                 break
             
             if len(reward_history) >= window_size:
                 delta = max(reward_history[-window_size:]) - min(reward_history[-window_size:])
                 if delta < min_reward_delta:
-                    print(f"✅ Stopping early: reward change < {min_reward_delta} over last {window_size} steps")
+                    print(f" Stopping early: reward change < {min_reward_delta} over last {window_size} steps")
                     break
             print("-"*100 ,"\n Reward History:", reward_history)        
             step += 1

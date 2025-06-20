@@ -1,11 +1,11 @@
 import tempfile
 import subprocess
 
-def run_unit_tests(code_snippet, test_cases):
+def run_unit_tests(code_snippet, test_cases,filepath):
     import re
     
     with tempfile.TemporaryDirectory() as tmpdir:
-        code_file = f"{tmpdir}/generated_code.py"
+        code_file = f"{tmpdir}/{filepath}"
 
         with open(code_file, "w") as f:
             # Write the code
@@ -44,12 +44,12 @@ def run_unit_tests(code_snippet, test_cases):
             total = passed + failed
             pass_rate = passed / total if total > 0 else 0.0
 
-            print("#" * 50)
-            print(f"{len(test_cases)} test case(s) written.")
-            print(test_cases)
-            print("passed", passed, "failed", failed, "total", total, "pass_rate", pass_rate)
-            print("Output:\n", output)
-            print("#" * 50)
+            # print("#" * 50)
+            # print(f"{len(test_cases)} test case(s) written.")
+            # print(test_cases)
+            # print("passed", passed, "failed", failed, "total", total, "pass_rate", pass_rate)
+            # print("Output:\n", output)
+            # print("#" * 50)
 
             return {
                 "passed": passed,
