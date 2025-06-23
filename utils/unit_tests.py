@@ -3,28 +3,28 @@ import subprocess
 
 def run_unit_tests(code_snippet, test_cases,filepath):
     import re
-    
-    with tempfile.TemporaryDirectory() as tmpdir:
-        code_file = f"{tmpdir}/{filepath}"
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            code_file = f"{tmpdir}/{filepath}"
 
-        with open(code_file, "w") as f:
-            # Write the code
-            f.write(code_snippet + "\n\n")
+            with open(code_file, "w") as f:
+                # Write the code
+                f.write(code_snippet + "\n\n")
 
-            # Define a mock `Pair` class (if needed)
-            f.write("class Pair:\n")
-            f.write("    def __init__(self, a, b):\n")
-            f.write("        self.a = a\n")
-            f.write("        self.b = b\n")
-            f.write("    def __iter__(self):\n")
-            f.write("        return iter((self.a, self.b))\n\n")
+                # Define a mock `Pair` class (if needed)
+                f.write("class Pair:\n")
+                f.write("    def __init__(self, a, b):\n")
+                f.write("        self.a = a\n")
+                f.write("        self.b = b\n")
+                f.write("    def __iter__(self):\n")
+                f.write("        return iter((self.a, self.b))\n\n")
 
-            # Write test cases as separate pytest test functions
-            for i, assertion in enumerate(test_cases):
-                f.write(f"def test_case_{i}():\n")
-                f.write(f"    {assertion}\n\n")
+                # Write test cases as separate pytest test functions
+                for i, assertion in enumerate(test_cases):
+                    f.write(f"def test_case_{i}():\n")
+                    f.write(f"    {assertion}\n\n")
 
-        try:
+        
             result = subprocess.run(
                 ["pytest", "--tb=short", "-q", code_file],
                 capture_output=True, text=True, timeout=10
@@ -58,14 +58,14 @@ def run_unit_tests(code_snippet, test_cases,filepath):
                 "pass_rate": pass_rate,
                 "output": output
             }
-        except subprocess.TimeoutExpired:
-            return {
-                "passed": 0,
-                "failed": 0,
-                "total": 0,
-                "pass_rate": 0.0,
-                "output": "Test execution timed out."
-            }
+    except subprocess.TimeoutExpired:
+        return {
+            "passed": 0,
+            "failed": 0,
+            "total": 0,
+            "pass_rate": 0.0,
+            "output": "Test execution timed out."
+        }
 
 
 def compute_adaptive_reward(test_result: dict) -> float:

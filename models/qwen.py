@@ -25,6 +25,5 @@ def generate_code(prompt):
         max_tokens=512,
         top_p=0.95
     )
-    print("hiiii")
-    print(completion.choices[0].message.content)
+
     return completion.choices[0].message.content

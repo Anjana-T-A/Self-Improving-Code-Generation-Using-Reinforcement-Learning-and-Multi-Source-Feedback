@@ -8,3 +8,4 @@ pytest
 trl==0.10.1
 configparser
 pylint
+ evaluate 
