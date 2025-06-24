@@ -35,7 +35,7 @@ def evaluate_model(model, tokenizer, test_dataset, device, k_values=[1, 5, 10]):
             batch_size = len(prompts)
             total_samples += batch_size
             for i in range(batch_size):
-                # print(i)
+                print(i)
                 try:
                     if i >= len(raw_batch) or i >= len(input_ids) or i >= len(attention_mask):
                         print(f"⚠️ Skipping sample #{i} due to length mismatch — batch #{batch_idx}")

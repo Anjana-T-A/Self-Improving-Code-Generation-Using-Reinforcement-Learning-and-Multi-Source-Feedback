@@ -1,3 +1,6 @@
+import os
+
+
 def extract_pylint_score(pylint_output):
     """
     Extracts and shapes a reward based on Pylint output.
@@ -125,3 +128,4 @@ def extract_unit_test_score(test_result_output):
     normalized_reward = 2 * (combined_reward - theoretical_min) / (theoretical_max - theoretical_min) - 1
 
     return normalized_reward
+
