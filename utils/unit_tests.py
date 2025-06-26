@@ -68,15 +68,3 @@ def run_unit_tests(code_snippet, test_cases,filepath):
         }
 
 
-def compute_adaptive_reward(test_result: dict) -> float:
-    """
-    Compute a normalized reward from unit test results, inspired by RLTF's adaptive feedback.
-    
-    Reward = -0.3 + 1.3 * (pass_rate)
-
-    Returns:
-        A float between -0.3 and 1.0.
-    """
-    pass_rate = test_result.get("pass_rate", 0.0)
-    reward = -0.3 + 1.3 * pass_rate
-    return round(reward, 4)  # Optional: round for readability

@@ -64,7 +64,7 @@ def run_ppo_epoch_training_static(
         kl_penalty="kl",  # Explicitly set KL penalty
         init_kl_coef=0.005, # Initial KL penalty coefficient
         adap_kl_ctrl=True, # Use adaptive KL control
-        target=.02,           # Target KL value
+        target=.2,           # Target KL value
 
     )
 
@@ -87,7 +87,7 @@ def run_ppo_epoch_training_static(
                 do_sample=True,
                 top_p=0.9,
                 top_k=40,
-                temperature=0.7,
+                temperature=0.6,
                 repetition_penalty=1.2,
                 pad_token_id=tokenizer.eos_token_id,
                 eos_token_id=tokenizer.eos_token_id,
@@ -104,6 +104,7 @@ def run_ppo_epoch_training_static(
             for i in range(len(prompts)):
                 prompt_len = input_ids[i].shape[-1]
                 gen_tokens = responses[i][prompt_len:]
+                print(f"Generated tokens length: {len(gen_tokens)}, gen_tokens: {gen_tokens}")
                 decoded_output = tokenizer.decode(gen_tokens, skip_special_tokens=True)
                 code_snippet = extract_code(decoded_output,"generated.py")
                 pylint_result = analyze_code_with_pylint(code_snippet,"generated.py")
@@ -112,6 +113,7 @@ def run_ppo_epoch_training_static(
                 response_tensors.append(gen_tokens)
                 reward_tensors.append(torch.tensor(reward, dtype=torch.float64).to(device))
                 epoch_rewards.append(reward)
+                print(input_ids[i])
                 # print(f"\n=== Prompt ===\n{prompts[i]}")
                 # print(f"=== Generated Code ===\n{decoded_output}")
                 # print(f"=== Pylint Reward === {reward:.3f}")
@@ -170,7 +172,7 @@ def run_ppo_epoch_training_unit_test(
 
     # PPO Config
     config = PPOConfig(
-        learning_rate=5e-7,  # Reduced learning rate significantly
+        learning_rate=3e-7,  # Reduced learning rate significantly
         batch_size=batch_size,
         mini_batch_size=batch_size,
         ppo_epochs=4,  # Inner PPO epochs per batch
@@ -179,7 +181,7 @@ def run_ppo_epoch_training_unit_test(
         kl_penalty="kl",  # Explicitly set KL penalty
         init_kl_coef=0.1, # Initial KL penalty coefficient
         adap_kl_ctrl=True, # Use adaptive KL control
-        target=.2,           # Target KL value
+        target=.1,           # Target KL value
 
     )
 
@@ -200,7 +202,7 @@ def run_ppo_epoch_training_unit_test(
                 input_ids=input_ids,
                 max_new_tokens=256,
                 do_sample=True,
-                top_p=0.9,
+                top_p=0.75,
                 top_k=50,
                 temperature=0.7,
                 repetition_penalty=1.2,
@@ -224,6 +226,8 @@ def run_ppo_epoch_training_unit_test(
                 code_snippet = extract_code(decoded_output,"test_generated.py")
                 unit_result = run_unit_tests(code_snippet,raw_batch[i]["test_list"],"test_generated.py")
                 reward = extract_unit_test_score(unit_result )
+                print(f"Unit test result: {unit_result}"    )
+                print(f"Reward: {reward}")
                 query_tensors.append(input_ids[i])
                 response_tensors.append(gen_tokens)
                 reward_tensors.append(torch.tensor(reward, dtype=torch.float32).to(device))
@@ -258,8 +262,8 @@ def run_ppo_epoch_training_combined(
     output_dir="./ppo_combined",
     batch_size=2,
     num_epochs=3,
-    weight_static=0.4,  # weight for pylint
-    weight_unit_test=0.6,  # weight for unit tests
+    weight_static=0.3,  # weight for pylint
+    weight_unit_test=0.7,  # weight for unit tests
 ):
     torch.cuda.empty_cache()
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -287,7 +291,7 @@ def run_ppo_epoch_training_combined(
 
     # PPO Config
     config = PPOConfig(
-        learning_rate=5e-7,
+        learning_rate=4e-7,
         batch_size=batch_size,
         mini_batch_size=batch_size,
         ppo_epochs=4,
@@ -323,7 +327,8 @@ def run_ppo_epoch_training_combined(
                 eos_token_id=tokenizer.eos_token_id,
                 attention_mask=attention_mask
             )
-
+            # prompt_text = tokenizer.decode(input_ids[i], skip_special_tokens=True)
+            # print(prompt_text)
             query_tensors = []
             response_tensors = []
             reward_tensors = []
@@ -345,18 +350,32 @@ def run_ppo_epoch_training_combined(
 
                 # Weighted combination
                 total_reward = weight_static * static_reward + weight_unit_test * unit_test_reward
-
                 query_tensors.append(input_ids[i])
                 response_tensors.append(gen_tokens)
                 reward_tensors.append(torch.tensor(total_reward, dtype=torch.float32).to(device))
                 epoch_rewards.append(total_reward)
-
+                                # ...existing code...
+                # print("query_tensors:")
+                # for t in query_tensors:
+                #     print("  shape:", t.shape, "dtype:", t.dtype, "sample:", t[:10])
+                # print("response_tensors:")
+                # for t in response_tensors:
+                #     print("  shape:", t.shape, "dtype:", t.dtype, "sample:", t[:10])
+                # print("reward_tensors:")
+                # for t in reward_tensors:
+                #     print("  value:", t.item(), "dtype:", t.dtype)
+                # PPO Step
+                # ...existing code...
                 # Debug (optional)
                 # print(f"\n=== Prompt ===\n{prompts[i]}")
                 # print(f"=== Generated Code ===\n{decoded_output}")
                 # print(f"Static Reward: {static_reward:.3f} | Unit Test Reward: {unit_test_reward:.3f} | Combined: {total_reward:.3f}")
                 # print("--" * 80)
 
+                print("Prompt:", tokenizer.decode(input_ids[i], skip_special_tokens=True))
+                print("Generated:", tokenizer.decode(responses[i], skip_special_tokens=True))
+                print("gen_tokens:", gen_tokens)
+                print("Decoded output:", decoded_output)
             if len(query_tensors) != config.batch_size:
                 print(f"Skipping batch {batch_idx+1}: expected batch size {config.batch_size}, got {len(query_tensors)}")
                 continue
@@ -366,7 +385,9 @@ def run_ppo_epoch_training_combined(
 
             if (batch_idx + 1) % 5 == 0:
                 print(f"Epoch {epoch+1} | Batch {batch_idx+1}")
-
+            query_tensors.clear()
+            response_tensors.clear()
+            reward_tensors.clear()
         # Save model
         checkpoint_dir = os.path.join(output_dir, f"epoch_{epoch+1}")
         model.save_pretrained(checkpoint_dir)

@@ -10,9 +10,9 @@ datasets = load_datasets()
 
 run_ppo_epoch_training_combined(
     "deepseek-ai/deepseek-coder-1.3b-instruct",
-    output_dir="./ppo_combined",
+    output_dir="./ppo_combined2",
     batch_size=2,
-    num_epochs=20,
-    weight_static=0.4,  # weight for pylint
-    weight_unit_test=0.6,  # weight for unit tests
+    num_epochs=5,
+    weight_static=0.3,  # weight for pylint
+    weight_unit_test=0.7,  # weight for unit tests
 )

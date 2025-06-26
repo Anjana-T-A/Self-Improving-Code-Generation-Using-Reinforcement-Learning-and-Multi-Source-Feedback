@@ -9,7 +9,7 @@ def load_datasets():
     datasets['humaneval'] = load_dataset("openai_humaneval", split="test")
     return datasets
 
-def get_dataloader(dataset_split, tokenizer, device, batch_size=2, shuffle=False):
+def get_dataloader(dataset_split, tokenizer, device, batch_size=4, shuffle=False):
     try:
         return DataLoader(
             dataset_split,
