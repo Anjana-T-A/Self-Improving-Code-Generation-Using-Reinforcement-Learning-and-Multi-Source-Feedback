@@ -8,7 +8,7 @@ datasets = load_datasets()
 
 import trl
 
-run_ppo_epoch_training_static("deepseek-ai/deepseek-coder-1.3b-instruct",output_dir="./ppo_checkpoints", 
+run_ppo_epoch_training_static("deepseek-ai/deepseek-coder-1.3b-instruct",output_dir="./ppo_checkpoints1", 
     batch_size=4, 
-    num_epochs=5 # Added epoch control
+    num_epochs=3 # Added epoch control
       )

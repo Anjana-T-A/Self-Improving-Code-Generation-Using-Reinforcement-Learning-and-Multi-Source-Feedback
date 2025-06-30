@@ -53,6 +53,82 @@ def extract_pylint_score(pylint_output):
 
     return reward
 
+# def extract_unit_test_score(test_result_output):
+#     """
+#     Compute a fully normalized reward score in [-1, 1] from unit test results.
+#     """
+#     # Initialize rewards
+#     reward_coarse = 0.0
+#     reward_fine = 0.0
+#     reward_adaptive = 0.0
+
+#     # Count passed/failed tests
+#     passed = test_result_output.get("passed", 0)
+#     failed = test_result_output.get("failed", 0)
+#     total = passed + failed
+
+#     # ---- Coarse-Grained Feedback ----
+#     if "SyntaxError" in test_result_output:
+#         reward_coarse = -1.0
+#     elif failed > 0:
+#         reward_coarse = -0.3
+#     elif passed > 0 and failed == 0:
+#         reward_coarse = 1.0
+
+#     # ---- Fine-Grained Feedback ----
+#     error_weights = {
+#         "IndexError": -0.2,
+#         "TypeError": -0.3,
+#         "ValueError": -0.2,
+#         "NameError": -0.5,
+#         "KeyError": -0.2,
+#         "ZeroDivisionError": -0.4,
+#         "ImportError": -0.3,
+#         "EOFError": -0.2,
+#         "TimeoutError": -0.4,
+#         "IndentationError": 0.0,   # Ignored
+#         "Triple-quoted": 0.0       # Ignored
+#     }
+
+#     fine_penalties = [
+#         weight for err, weight in error_weights.items()
+#         if err in test_result_output
+#     ]
+#     reward_fine = sum(fine_penalties)
+#     reward_fine = max(-1.0, reward_fine)  # Clip lower bound
+
+#     # ---- Adaptive Feedback ----
+#     if total > 0:
+#         reward_adaptive = -0.3 + 1.3 * (passed / total)
+#     else:
+#         reward_adaptive = -0.3  # No tests run
+
+#     # ---- Weighted Combination ----
+#     weight_coarse = 1.0
+#     weight_fine = 0.5
+#     weight_adaptive = 2.0
+#     total_weight = weight_coarse + weight_fine + weight_adaptive
+
+#     combined_reward = (
+#         weight_coarse * reward_coarse +
+#         weight_fine * reward_fine +
+#         weight_adaptive * reward_adaptive
+#     ) / total_weight
+
+#     # ---- Full Normalization to [-1, 1] ----
+#     theoretical_min = (
+#         weight_coarse * -1.0 + weight_fine * -1.0 + weight_adaptive * -0.3
+#     ) / total_weight  # = -0.642857...
+    
+#     theoretical_max = (
+#         weight_coarse * 1.0 + weight_fine * 0.0 + weight_adaptive * 1.0
+#     ) / total_weight  # = 0.857143...
+
+#     # Apply linear normalization
+#     normalized_reward = 2 * (combined_reward - theoretical_min) / (theoretical_max - theoretical_min) - 1
+
+#     return normalized_reward
+
 def extract_unit_test_score(test_result_output):
     """
     Compute a fully normalized reward score in [-1, 1] from unit test results.
@@ -66,9 +142,10 @@ def extract_unit_test_score(test_result_output):
     passed = test_result_output.get("passed", 0)
     failed = test_result_output.get("failed", 0)
     total = passed + failed
+    output_text = test_result_output.get("output", "")
 
     # ---- Coarse-Grained Feedback ----
-    if "SyntaxError" in test_result_output:
+    if "SyntaxError" in output_text:
         reward_coarse = -1.0
     elif failed > 0:
         reward_coarse = -0.3
@@ -92,7 +169,7 @@ def extract_unit_test_score(test_result_output):
 
     fine_penalties = [
         weight for err, weight in error_weights.items()
-        if err in test_result_output
+        if err in output_text
     ]
     reward_fine = sum(fine_penalties)
     reward_fine = max(-1.0, reward_fine)  # Clip lower bound
@@ -128,4 +205,3 @@ def extract_unit_test_score(test_result_output):
     normalized_reward = 2 * (combined_reward - theoretical_min) / (theoretical_max - theoretical_min) - 1
 
     return normalized_reward
-
