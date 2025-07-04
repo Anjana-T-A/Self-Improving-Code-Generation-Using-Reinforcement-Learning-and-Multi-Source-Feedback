@@ -76,7 +76,7 @@ def evaluate_model(model, tokenizer, test_dataset, device,filepath1, filepath2, 
 
                             decoded_code = tokenizer.decode(gen_tokens, skip_special_tokens=True)
                             # print(f"\n[🔹 Prompt #{total_samples}-{i}]")
-                            # print(f"🟡 Prompt:\n{prompts[i]}")
+                            print(f"🟡 Prompt:\n{prompts[i]}")
                             # print(f"🟢 Generated:\n{decoded_code}")
                             code_snippet = extract_code(decoded_code, filepath1)
                             # print(f"🟢 Extracted:\n{decoded_code}")
@@ -84,7 +84,7 @@ def evaluate_model(model, tokenizer, test_dataset, device,filepath1, filepath2, 
                                 code_snippet = ""
                             print(f"🟢 Code Snippet:\n{code_snippet}")
                             syntax_ok = is_syntax_valid(code_snippet)
-                            print(f"🔴 Syntax Valid: {syntax_ok}")
+                            # print(f"🔴 Syntax Valid: {syntax_ok}")
                             all_syntax.append(syntax_ok)
                            
                             if syntax_ok:
@@ -104,12 +104,12 @@ def evaluate_model(model, tokenizer, test_dataset, device,filepath1, filepath2, 
                                 all_pass.append(True)
                             # --- Pylint score calculation ---
                             pylint_result = analyze_code_with_pylint(code_snippet, filepath1)
-                            print(f"🔵 Pylint Messages: {pylint_result}")
+                            # print(f"🔵 Pylint Messages: {pylint_result}")
                             pylint_score_sum += pylint_result["score"]
                             pylint_score_count += 1
 
-                            print(f"Static Reward: {pylint_score_sum} | Unit Test Reward: {passed} | Code extract: {code_snippet}")
-                            print("--" * 80)
+                            # print(f"Static Reward: {pylint_score_sum} | Unit Test Reward: {passed} | Code extract: {code_snippet}")
+                            # print("--" * 80)
                         except Exception as e:
                             print(f"\n Exception at batch #{batch_idx}, sample #{i}")
                             print(f"  raw_batch size: {len(raw_batch)}, input_ids shape: {input_ids.shape}")
@@ -145,8 +145,69 @@ def evaluate_model(model, tokenizer, test_dataset, device,filepath1, filepath2, 
 
     return {
         "compiler_error_rate": compiler_error_rate,
+        "avg_pylint_score": avg_pylint_score,
         **{f"pass@{k}": pass_at_k_sums[k] / num_prompts for k in k_values}
     }
+
+
+
+
+def evaluate_single_prompt(model, tokenizer, prompt, test_list, device, filepath_temp_code, filepath_test_dir):
+    model.eval()
+
+    print(f"\n🔹 Prompt:\n{prompt}")
+
+    input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(device)
+    attention_mask = tokenizer(prompt, return_tensors="pt").attention_mask.to(device)
+
+    with torch.no_grad():
+        outputs = model.generate(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            max_new_tokens=512,
+            do_sample=True,
+            temperature=0.7,
+            top_k=50,
+            top_p=0.95,
+            pad_token_id=tokenizer.eos_token_id,
+            eos_token_id=tokenizer.eos_token_id
+        )
+    
+    output_seq = outputs[0]
+    prompt_len = input_ids.shape[-1]
+    gen_tokens = output_seq[prompt_len:]
+    decoded_code = tokenizer.decode(gen_tokens, skip_special_tokens=True)
+    print(f"\n🟢 Generated Code:\n{decoded_code}")
+
+    # Extract and validate code (assume extract_code & is_syntax_valid exist)
+    code_snippet = extract_code(decoded_code, filepath_temp_code)
+    if not isinstance(code_snippet, str):
+        code_snippet = ""
+
+    syntax_ok = is_syntax_valid(code_snippet)
+    print(f"\n🧪 Syntax Valid: {syntax_ok}")
+
+    # Run unit tests (if provided)
+    if test_list and syntax_ok:
+        test_result = run_unit_tests(code_snippet, test_list, filepath_test_dir)
+        passed = test_result.get("passed", False)
+        print(f"\n✅ Unit Tests Passed: {passed}")
+    else:
+        passed = False
+        print(f"\n⚠️ Skipping Unit Tests")
+
+    # Run pylint (assume analyze_code_with_pylint exists)
+    pylint_result = analyze_code_with_pylint(code_snippet, filepath_temp_code)
+    pylint_score = pylint_result.get("score", 0.0)
+    print(f"\n📊 Pylint Score: {pylint_score:.2f}")
+
+    return {
+        "generated_code": code_snippet,
+        "syntax_valid": syntax_ok,
+        "unit_tests_passed": passed,
+        "pylint_score": pylint_score
+    }
+
 
 # def evaluate_model(model, tokenizer, test_dataset, device,  filepath1="test_generate.py", filepath2="test_code.py", k_values=[1, 5, 10]):
     total_samples = 0

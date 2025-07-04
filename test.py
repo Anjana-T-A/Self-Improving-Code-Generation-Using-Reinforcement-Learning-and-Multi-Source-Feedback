@@ -1,7 +1,7 @@
 import os
 from rl.ppo_trainer_batch import create_model_and_tokenizer
 from utils.prompts import create_prompt
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer

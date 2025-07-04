@@ -267,10 +267,6 @@ def run_ppo_epoch_training_static(
         tokenizer.save_pretrained(checkpoint_dir)
         print(f"Saved checkpoint to {checkpoint_dir}")
 
-
-
-
-
 def run_ppo_epoch_training_unit_test(
     model_path,
     output_dir="./ppo_unit_test",
