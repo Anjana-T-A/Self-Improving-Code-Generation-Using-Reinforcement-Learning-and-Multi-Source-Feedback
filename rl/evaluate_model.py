@@ -43,7 +43,7 @@ def evaluate_model(model, tokenizer, test_dataset, device,filepath1, filepath2, 
                 # print(i)
                 try:
                     if i >= len(raw_batch) or i >= len(input_ids) or i >= len(attention_mask):
-                        print(f"⚠️ Skipping sample #{i} due to length mismatch — batch #{batch_idx}")
+                        print(f"Skipping sample #{i} due to length mismatch — batch #{batch_idx}")
                         print(f"  Sizes — input_ids: {len(input_ids)}, attention_mask: {len(attention_mask)}, prompts: {len(prompts)}, raw_batch: {len(raw_batch)}")
                         continue
                     prompt_input_ids = input_ids[i].unsqueeze(0).to(device)
@@ -75,22 +75,18 @@ def evaluate_model(model, tokenizer, test_dataset, device,filepath1, filepath2, 
                             gen_tokens = output_seq[prompt_len:]
 
                             decoded_code = tokenizer.decode(gen_tokens, skip_special_tokens=True)
-                            # print(f"\n[🔹 Prompt #{total_samples}-{i}]")
-                            print(f"🟡 Prompt:\n{prompts[i]}")
-                            # print(f"🟢 Generated:\n{decoded_code}")
+                            print(f" Prompt:\n{prompts[i]}")
                             code_snippet = extract_code(decoded_code, filepath1)
-                            # print(f"🟢 Extracted:\n{decoded_code}")
                             if not isinstance(code_snippet, str):
                                 code_snippet = ""
-                            print(f"🟢 Code Snippet:\n{code_snippet}")
+                            print(f" Code Snippet:\n{code_snippet}")
                             syntax_ok = is_syntax_valid(code_snippet)
-                            # print(f"🔴 Syntax Valid: {syntax_ok}")
                             all_syntax.append(syntax_ok)
                            
                             if syntax_ok:
                                 test_list = raw_batch[i]["test_list"]
                                 if not test_list:  # Check if the list is empty
-                                    print(f"⚠️ Skipping unit tests for sample #{i} because test_list is empty.")
+                                    print(f" Skipping unit tests for sample #{i} because test_list is empty.")
                                     passed = False  # Or handle it differently, e.g., set passed = True
                                 else:
                                     test_result = run_unit_tests(code_snippet, test_list, filepath2)
@@ -108,8 +104,6 @@ def evaluate_model(model, tokenizer, test_dataset, device,filepath1, filepath2, 
                             pylint_score_sum += pylint_result["score"]
                             pylint_score_count += 1
 
-                            # print(f"Static Reward: {pylint_score_sum} | Unit Test Reward: {passed} | Code extract: {code_snippet}")
-                            # print("--" * 80)
                         except Exception as e:
                             print(f"\n Exception at batch #{batch_idx}, sample #{i}")
                             print(f"  raw_batch size: {len(raw_batch)}, input_ids shape: {input_ids.shape}")
@@ -125,7 +119,7 @@ def evaluate_model(model, tokenizer, test_dataset, device,filepath1, filepath2, 
                         pass_at_k_sums[k] += unbiased_pass_at_k(c, n, k)
                    
                 except Exception as e:
-                    print(f"\n❌ Unexpected exception at batch #{batch_idx}, sample #{i}")
+                    print(f"\n Unexpected exception at batch #{batch_idx}, sample #{i}")
                     print(f"  Exception: {e}")
                     continue
 
@@ -209,121 +203,3 @@ def evaluate_single_prompt(model, tokenizer, prompt, test_list, device, filepath
     }
 
 
-# def evaluate_model(model, tokenizer, test_dataset, device,  filepath1="test_generate.py", filepath2="test_code.py", k_values=[1, 5, 10]):
-    total_samples = 0
-    syntax_valid_counts = 0
-    pass_at_k_sums = {k: 0.0 for k in k_values}
-    pylint_score_sum = 0.0
-    pylint_score_count = 0
-    dataloader = get_dataloader(test_dataset, tokenizer, device)
-    print("\n===== Evaluating Unbiased Pass@k, Compiler Error Rate, and Avg. Pylint Score =====")
-
-    with torch.no_grad():
-        for batch_idx, (input_ids, attention_mask, prompts, raw_batch) in enumerate(dataloader):
-            batch_size = len(prompts)
-            total_samples += batch_size
-            for i in range(batch_size):
-                try:
-                    if i >= len(raw_batch) or i >= len(input_ids) or i >= len(attention_mask):
-                        print(f"⚠️ Skipping sample #{i} due to length mismatch — batch #{batch_idx}")
-                        continue
-                    prompt_input_ids = input_ids[i].unsqueeze(0).to(device)
-                    prompt_attention_mask = attention_mask[i].unsqueeze(0).to(device)
-                    all_pass = []
-                    all_syntax = []
-
-                    for _ in range(max(k_values)):
-                        try:
-                            outputs = model.generate(
-                                input_ids=prompt_input_ids,
-                                attention_mask=prompt_attention_mask,
-                                max_new_tokens=512,
-                                do_sample=True,
-                                temperature=0.7,
-                                top_k=50,
-                                top_p=0.95,
-                                pad_token_id=tokenizer.eos_token_id,
-                                eos_token_id=tokenizer.eos_token_id
-                            )
-                            output_seq = outputs[0]
-                            prompt_len = prompt_input_ids.shape[-1]
-                            if prompt_len >= output_seq.shape[-1]:
-                                print(f"⚠️ Skipping due to prompt_len ({prompt_len}) >= output length ({output_seq.shape[-1]})")
-                                continue
-
-                            gen_tokens = output_seq[prompt_len:]
-                            decoded_code = tokenizer.decode(gen_tokens, skip_special_tokens=True)
-                            code_snippet = extract_code(decoded_code, filepath1)
-                            print("_____________code_snippet__________________/n", code_snippet)
-                            if not isinstance(code_snippet, str):
-                                code_snippet = ""
-
-                            
-
-                            syntax_ok = is_syntax_valid(code_snippet)
-                            all_syntax.append(syntax_ok)
-
-                            if syntax_ok:
-                                test_list = raw_batch[i]["test_list"]
-                                if not test_list:
-                                    print(f"⚠️ Skipping unit tests for sample #{i} because test_list is empty.")
-                                    passed = False
-                                else:
-                                    test_result = run_unit_tests(code_snippet, test_list,filepath2)
-                                    passed = test_result["passed"]
-                            else:
-                                passed = False
-                            all_pass.append(passed)
-                            # --- Pylint score calculation ---
-                            pylint_result = analyze_code_with_pylint(code_snippet, filepath1)
-                            pylint_score = extract_pylint_score(pylint_result)
-                            pylint_score_sum += pylint_result["score"]
-                            pylint_score_count += 1
-                            # ---------------------------------
-                              # Debug (optional)
-                            print(f"\n=== Prompt ===\n{prompts[i]}")
-                            print(f"=== Generated Code ===\n{decoded_code}")
-                            print(f"Static Reward: {pylint_score} | Unit Test Reward: {passed} | Code extract: {code_snippet}")
-                            print("--" * 80)
-
-                        except Exception as e:
-                            print(f"\n Exception at batch #{batch_idx}, sample #{i}")
-                            print(f"  raw_batch size: {len(raw_batch)}, input_ids shape: {input_ids.shape}")
-                            print(f"  Exception: {e}")
-                            continue
-
-                    syntax_valid_counts += sum(all_syntax)
-                    c = sum(all_pass)
-                    n = len(all_pass)
-                    for k in k_values:
-                        pass_at_k_sums[k] += unbiased_pass_at_k(c, n, k)
-                except Exception as e:
-                    print(f"\n❌ Unexpected exception at batch #{batch_idx}, sample #{i}")
-                    print(f"  Exception: {e}")
-                    continue
-    
-
-    num_prompts = total_samples
-    compiler_error_rate = 1 - (syntax_valid_counts / (num_prompts * max(k_values)))
-    avg_pylint_score = pylint_score_sum / pylint_score_count if pylint_score_count > 0 else 0.0
-
-    print(f"Total prompts evaluated: {num_prompts}")
-    print(f"Compiler Error Rate: {compiler_error_rate:.3f}")
-    print(f"Average Pylint Score: {avg_pylint_score:.3f}")
-
-    for k in k_values:
-        pass_at_k = pass_at_k_sums[k] / num_prompts
-        print(f"Unbiased Pass@{k}: {pass_at_k:.3f}")
-    # Delete temporary files
-    for fp in [filepath1, filepath2]:
-        try:
-            if os.path.exists(fp):
-                os.remove(fp)
-        except Exception as e:
-            print(f"Warning: Could not delete {fp}: {e}")
-
-    return {
-        "compiler_error_rate": compiler_error_rate,
-        "avg_pylint_score": avg_pylint_score,
-        **{f"pass@{k}": pass_at_k_sums[k] / num_prompts for k in k_values}
-    }

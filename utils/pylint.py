@@ -17,10 +17,6 @@ def analyze_code_with_pylint(code_snippet, file_name):
             'normalized_reward': float (0.0 to 1.0)
         }
     """
-    # Write the generated code to a file
-    
-
-    # Run Pylint with JSON output to capture detailed lint messages
     result = subprocess.run(
         ["pylint", "--output-format=json", file_name],
         capture_output=True,
