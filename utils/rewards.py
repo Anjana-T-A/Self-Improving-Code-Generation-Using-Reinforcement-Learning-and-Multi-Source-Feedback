@@ -1,88 +1,126 @@
 import os
-import subprocess
-import json
-
-def static_analysis_reward_sonar(sonar_result):
-    print(sonar_result)
-    metrics = sonar_result.get('component', {}).get('measures', [])
-    if not metrics:
-        return 0.0
-
-    reward_sum = 0
-    count = 0
-    for m in metrics:
-        try:
-            rating = float(m['value'])
-            reward_sum += (5 - rating) / 4
-            count += 1
-        except (KeyError, ValueError, TypeError):
-            continue
-
-    return reward_sum / count if count else 0.0
 
 
-def analyze_code_with_pylint(code_snippet, file_name="generated_code.py"):
+def extract_pylint_score(pylint_output):
     """
-    Analyze the generated Python code using Pylint and compute a normalized reward.
-    
+    Extracts and shapes a reward based on Pylint output.
+
     Args:
-        code_snippet (str): The code to analyze.
-        file_name (str): Filename to write the code to (default: 'generated_code.py').
+        pylint_output: The output from Pylint (dict or string).
 
     Returns:
-        dict: {
-            'pylint_messages': list of Pylint messages (JSON),
-            'score': numeric score (0.0 to 10.0),
-            'normalized_reward': float (0.0 to 1.0)
-        }
+        A reward value in the range [-1, 1].
     """
-    # Write the generated code to a file
-    with open(file_name, 'w') as f:
-        f.write(code_snippet)
+    if pylint_output is None:
+        print("Error: Pylint output is None!")
+        return -1.0  
 
-    # Run Pylint with JSON output to capture detailed lint messages
-    result = subprocess.run(
-        ["pylint", "--output-format=json", file_name],
-        capture_output=True,
-        text=True
-    )
+    if "syntax-error" in str(pylint_output).lower():
+        return -1.0  # Immediate strong penalty for syntax errors
 
-    try:
-        lint_output = json.loads(result.stdout)
-    except json.JSONDecodeError:
-        print("Failed to parse Pylint output as JSON:")
-        print(result.stdout)
-        lint_output = []
-
-    # Run Pylint again to extract the numeric score from parseable output
-    score_result = subprocess.run(
-        ["pylint", file_name, "-f", "parseable"],
-        capture_output=True,
-        text=True
-    )
-    score_line = next(
-        (line for line in score_result.stdout.splitlines() if "Your code has been rated at" in line),
-        None
-    )
-
-    score = 0.0  # Default to 0.0 if parsing fails
-    if score_line:
-        # Example line: "************* Module generated_code\n...Your code has been rated at 7.50/10"
+    raw_score = 0.0
+    if isinstance(pylint_output, dict):
+        raw_score = pylint_output.get("score", 0.0)
+    else:
         try:
-            raw_score = score_line.split(" ")[6].split("/")[0]
-            score = float(raw_score)
-        except (IndexError, ValueError):
-            print("Failed to parse Pylint score line:", score_line)
+            # More robust parsing of Pylint output
+            score_line = next(
+                (line for line in pylint_output.splitlines()
+                 if "rated at" in line),
+                ""
+            )
+            if score_line:  # Check if score_line is not empty
+                raw_score = float(score_line.split("/")[0].split()[-1])
+        except (ValueError, IndexError):
+            print("Warning: Could not parse Pylint score.")  # Log the error
+            return -0.5  # Moderate penalty if parsing fails
 
-    # Normalize score to [0.0, 1.0]
-    normalized_reward = max(min(score / 10.0, 1.0), 0.0)
+    if raw_score >= 7.0:  # High quality
+        reward = min(1.0, (raw_score - 7.0) / 3.0)  # [7,10] -> [0,1]
+    elif raw_score >= 5.0:  # Acceptable
+        reward = (raw_score - 5.0) / 2.0 - 0.5  # [5,7) -> [-0.5,0.5]
+    else:  # Low quality
+        reward = -0.5 + (raw_score / 5.0)/2  # [0,5) -> [-0.5,0)
 
-    # Debug output
-    print(f"Pylint score: {score:.2f} / 10.0")
-    print(f"Normalized reward: {normalized_reward:.2f}")
+    if "fatal" in str(pylint_output).lower():
+        reward = max(-1.0, reward - 0.3)
 
-    return {
-        "pylint_messages": lint_output,
-        "score": score,
-        "normalized_reward": normalized_reward
+    return reward
+
+
+def extract_unit_test_score(test_result_output):
+    """
+    Compute a fully normalized reward score in [-1, 1] from unit test results.
+    """
+    # Initialize rewards
+    reward_coarse = 0.0
+    reward_fine = 0.0
+    reward_adaptive = 0.0
+
+    # Count passed/failed tests
+    passed = test_result_output.get("passed", 0)
+    failed = test_result_output.get("failed", 0)
+    total = passed + failed
+    output_text = test_result_output.get("output", "")
+
+    # ---- Coarse-Grained Feedback ----
+    if "SyntaxError" in output_text:
+        reward_coarse = -1.0
+    elif failed > 0:
+        reward_coarse = -0.3
+    elif passed > 0 and failed == 0:
+        reward_coarse = 1.0
+
+    # ---- Fine-Grained Feedback ----
+    error_weights = {
+        "IndexError": -0.2,
+        "TypeError": -0.3,
+        "ValueError": -0.2,
+        "NameError": -0.5,
+        "KeyError": -0.2,
+        "ZeroDivisionError": -0.4,
+        "ImportError": -0.3,
+        "EOFError": -0.2,
+        "TimeoutError": -0.4,
+        "IndentationError": 0.0,   # Ignored
+        "Triple-quoted": 0.0       # Ignored
     }
+
+    fine_penalties = [
+        weight for err, weight in error_weights.items()
+        if err in output_text
+    ]
+    reward_fine = sum(fine_penalties)
+    reward_fine = max(-1.0, reward_fine)  # Clip lower bound
+
+    # ---- Adaptive Feedback ----
+    if total > 0:
+        reward_adaptive = -0.3 + 1.3 * (passed / total)
+    else:
+        reward_adaptive = -0.3  # No tests run
+
+    # ---- Weighted Combination ----
+    weight_coarse = 1.0
+    weight_fine = 0.5
+    weight_adaptive = 2.0
+    total_weight = weight_coarse + weight_fine + weight_adaptive
+
+    combined_reward = (
+        weight_coarse * reward_coarse +
+        weight_fine * reward_fine +
+        weight_adaptive * reward_adaptive
+    ) / total_weight
+
+    # ---- Full Normalization to [-1, 1] ----
+    theoretical_min = (
+        weight_coarse * -1.0 + weight_fine * -1.0 + weight_adaptive * -0.3
+    ) / total_weight  # = -0.642857...
+    
+    theoretical_max = (
+        weight_coarse * 1.0 + weight_fine * 0.0 + weight_adaptive * 1.0
+    ) / total_weight  # = 0.857143...
+
+    # Apply linear normalization
+    normalized_reward = 2 * (combined_reward - theoretical_min) / (theoretical_max - theoretical_min) - 1
+
+    return normalized_reward

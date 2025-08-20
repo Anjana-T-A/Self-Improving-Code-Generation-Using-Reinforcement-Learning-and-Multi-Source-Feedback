@@ -1,158 +1,91 @@
-from data.datasets import load_datasets
-from utils.prompts import create_prompt
-from utils.sonar_api import analyze_code_with_sonarqube
-from utils.rewards import static_analysis_reward_sonar
-from utils.extract_code import extract_code
-import models.starcoder as starcoder
-import models.deepseek as deepseek
-import models.qwen as qwen
-from utils.pylint import analyze_code_with_pylint
 
+import os
+
+import torch
+
+from rl.evaluate_model import evaluate_model
+from rl.model_loader import load_checkpoint
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+from data.datasets import load_datasets
+from rl.ppo_trainer_batch import run_ppo_epoch_training_combined
 datasets = load_datasets()
 
-def evaluate_dataset_static_analysis(dataset_split, model_module):
-    rewards = []
-    for item in dataset_split:
-        prompt = create_prompt(item['text'])
-        print(prompt)
-        response = model_module.generate_code(prompt)
-        code = extract_code(response)
-        test = analyze_code_with_pylint(code)
-        # sonar_result = analyze_code_with_sonarqube(code)
-        # reward = static_analysis_reward(sonar_result)
-        # rewards.append({
-        #     "prompt": prompt,
-        #     "code": code,
-        #     "reward": reward
-        # })
-    return rewards
 
 
-results = evaluate_dataset_static_analysis(datasets['train'], qwen)
-
-print(results[:2])
-
-
-# from data.datasets import load_datasets
-# from utils.prompts import create_prompt
-# from utils.sonar_api import analyze_code_with_sonarqube
-# from utils.rewards import static_analysis_reward
-# from utils.unit_tests import run_unit_tests
-# import models.starcoder as starcoder
-# import models.deepseek as deepseek
-# import models.codellama as codellama
-
-# datasets = load_datasets()
-
-# def evaluate_dataset_with_multisource_reward(dataset_split, model_module):
-#     rewards = []
-#     for item in dataset_split:
-#         prompt = create_prompt(item['text'])
-#         code = model_module.generate_code(prompt)
-        
-#         # 1️⃣ Static analysis reward
-#         sonar_result = analyze_code_with_sonarqube(code)
-#         reward_static = static_analysis_reward(sonar_result)
-        
-#         # 2️⃣ Unit test reward (if test cases exist in dataset)
-#         test_cases = item.get('test_list', '') or item.get('test', '')
-#         unit_test_result = run_unit_tests(code, test_cases)
-#         reward_unit_test = unit_test_result['pass_rate']
-        
-#         # 3️⃣ Combine rewards (simple average, or tune α)
-#         alpha = 0.5  # weight for unit tests
-#         reward = alpha * reward_unit_test + (1 - alpha) * reward_static
-
-#         rewards.append({
-#             "prompt": prompt,
-#             "code": code,
-#             "reward_unit_test": reward_unit_test,
-#             "reward_static": reward_static,
-#             "reward_combined": reward
-#         })
-#     return rewards
-
-# # Example: Evaluate MBPP train split with StarCoder
-# results = evaluate_dataset_with_multisource_reward(datasets['train'], starcoder)
-
-# # Debug: Print first 2 results
-# print(results[:2])
+run_ppo_epoch_training_combined(
+    "deepseek-ai/deepseek-coder-1.3b-instruct",
+    output_dir="./ppo1",
+    batch_size=2,
+    num_epochs=2,
+    weight_static=0,  # weight for pylint
+    weight_unit_test=1,  # weight for unit tests
+)
 
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# def evaluate_dataset_unit_test_only(dataset_split, model_module):
-#     results = []
-#     for item in dataset_split:
-#         prompt = create_prompt(item['text'])
-#         code = model_module.generate_code(prompt)
-        
-#         # Extract unit tests
-#         test_cases = item.get('test_list', '') or item.get('test', '')
-#         unit_test_result = run_unit_tests(code, test_cases)
-#         reward = unit_test_result['pass_rate']
-        
-#         results.append({
-#             "prompt": prompt,
-#             "code": code,
-#             "unit_test_result": unit_test_result,
-#             "reward": reward
-#         })
-#     return results
+result_file = "results_batch2_e2.txt"
 
-# # Example: Evaluate MBPP train split with StarCoder
-# results = evaluate_dataset_unit_test_only(datasets['train'], starcoder)
 
-# # Debug: Print first 2 results
-# print(results[:2])
+with open(result_file, "a") as f:
+    for i in range(1, 12): 
+        model_path = f"./ppo{i}/epoch_2"
+        try:
+            print(f"[DEBUG] Loading model from: {model_path}")
+            model, tokenizer = load_checkpoint(model_path, device)
 
-# from data.datasets import load_datasets
-# from utils.prompts import create_prompt
-# from utils.sonar_api import analyze_code_with_sonarqube
-# from utils.rewards import static_analysis_reward
-# from utils.unit_tests import run_unit_tests
-# from utils.extract_code import extract_code
+            print(f"[DEBUG] Evaluating model ppo{i}")
+            results = evaluate_model(
+                model,
+                tokenizer,
+                datasets["test"],
+                device,
+                "pyscore.py",
+                "test.py",
+                k_values=[5, 10]
+            )
 
-# # Dynamically imported model module will provide `generate_code(prompt)`
-# def evaluate_model(dataset_split, model_module, mode="multi"):
-#     results = []
-#     for item in dataset_split:
-#         prompt = create_prompt(item['text'])
-#         response = model_module.generate_code(prompt)
-#         code = extract_code(response)
+            f.write(f"Results for ppo{i}:\n")
+            f.write(str(results) + "\n\n")
+            f.flush()
+            print(f"[✓] Evaluation complete for p{i}")
 
-#         test_cases = item.get('test_list', '') or item.get('test', '')
+        except Exception as e:
+            error_msg = f"Results for ppo{i}: ERROR - {str(e)}\n\n"
+            f.write(error_msg)
+            f.flush()
+            print(f"[!] Error in ppo{i}: {e}")
 
-#         reward_unit_test, reward_static, reward_combined = 0.0, 0.0, 0.0
 
-#         if mode == "unit":
-#             test_result = run_unit_tests(code, test_cases)
-#             reward_unit_test = test_result['pass_rate']
-#             reward = reward_unit_test
+result_file = "results1_batch2_e1.txt"
 
-#         elif mode == "static":
-#             sonar_result = analyze_code_with_sonarqube(code)
-#             reward_static = static_analysis_reward(sonar_result)
-#             reward = reward_static
 
-#         elif mode == "multi":
-#             sonar_result = analyze_code_with_sonarqube(code)
-#             reward_static = static_analysis_reward(sonar_result)
+with open(result_file, "a") as f:
+    for i in range(1, 12):  # p5 to p11
+        model_path = f"./ppo{i}/epoch_1"
+        try:
+            print(f"[DEBUG] Loading model from: {model_path}")
+            model, tokenizer = load_checkpoint(model_path, device)
 
-#             test_result = run_unit_tests(code, test_cases)
-#             reward_unit_test = test_result['pass_rate']
+            print(f"[DEBUG] Evaluating model p{i}")
+            results = evaluate_model(
+                model,
+                tokenizer,
+                datasets["test"],
+                device,
+                "pyscore.py",
+                "test.py",
+                k_values=[5, 10]
+            )
 
-#             alpha = 0.5
-#             reward = alpha * reward_unit_test + (1 - alpha) * reward_static
+            f.write(f"Results for ppo{i}:\n")
+            f.write(str(results) + "\n\n")
+            f.flush()
+            print(f"[✓] Evaluation complete for p{i}")
 
-#         else:
-#             raise ValueError("Unsupported mode: choose from ['unit', 'static', 'multi']")
-
-#         results.append({
-#             "prompt": prompt,
-#             "code": code,
-#             "reward_unit_test": reward_unit_test,
-#             "reward_static": reward_static,
-#             "reward_combined": reward
-#         })
-
-#     return results
+        except Exception as e:
+            error_msg = f"Results for ppo{i}: ERROR - {str(e)}\n\n"
+            f.write(error_msg)
+            f.flush()
+            print(f"[!] Error in ppo{i}: {e}")
