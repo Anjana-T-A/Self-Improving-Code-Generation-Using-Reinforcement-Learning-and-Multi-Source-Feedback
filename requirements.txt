@@ -1,0 +1,11 @@
+torch
+transformers
+datasets
+requests
+docker
+huggingface_hub
+pytest
+trl==0.10.1
+configparser
+pylint
+ evaluate 
